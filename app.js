@@ -10,6 +10,7 @@ const els = {
   stage: document.getElementById('stage'),
   hint: document.getElementById('stageHint'),
   frameInput: document.getElementById('frameInput'),
+  framePicker: document.getElementById('framePicker'),
   photoInput: document.getElementById('photoInput'),
   editorBlock: document.getElementById('editorBlock'),
   zoom: document.getElementById('zoom'),
@@ -21,7 +22,10 @@ const els = {
   downloadBtn: document.getElementById('downloadBtn'),
 };
 
-const FRAME_SRC = 'LASER TWIBBON (1350 x 1080 px).png';
+// Add a template: drop its PNG in frames/ and add one line here.
+const FRAMES = [
+  { name: 'Laser', src: 'frames/laser.png' },
+];
 
 const state = {
   frame: null,            // Image (layer 2)
@@ -282,9 +286,26 @@ els.downloadBtn.addEventListener('click', () => {
 
 function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
 
-// Auto-load bundled frame.
-const bundled = new Image();
-bundled.onload = () => loadFrame(bundled);
-bundled.src = FRAME_SRC;
+// --- Frame picker (built from FRAMES) ---
+function selectFrame(src, btn) {
+  const img = new Image();
+  img.onload = () => loadFrame(img);
+  img.src = src;
+  [...els.framePicker.children].forEach((c) => c.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+FRAMES.forEach((f, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'preset';
+  btn.title = f.name;
+  const img = document.createElement('img');
+  img.src = f.src;
+  img.alt = f.name;
+  btn.appendChild(img);
+  btn.addEventListener('click', () => selectFrame(f.src, btn));
+  els.framePicker.appendChild(btn);
+  if (i === 0) selectFrame(f.src, btn); // auto-load first
+});
 
 render();

@@ -10,7 +10,7 @@ A lightweight, zero-dependency static web app for placing your photo behind the
 - **Two-layer compositing** — your photo (layer 1) sits behind a fixed frame PNG (layer 2).
 - **Position editor** — drag to move, zoom (slider · scroll wheel · pinch), rotate (slider · two-finger).
 - **Auto window-fit** — the app scans the frame's transparent area and cover-fits your photo into it on upload.
-- **Swappable frame** — ships with the Sirkumboy frame, but you can load any PNG with a transparent window.
+- **Built-in frame picker** — choose from bundled templates in `frames/`, or load any PNG with a transparent window.
 - **Native-resolution export** — downloads at the frame's exact size (1350 × 1080) as PNG.
 - **No build, no dependencies** — plain HTML, CSS, and Canvas API.
 
@@ -21,7 +21,7 @@ A lightweight, zero-dependency static web app for placing your photo behind the
 3. Drag / zoom / rotate until your photo sits right in the frame window.
 4. Click **Download PNG**.
 
-Optional: **Change frame** to swap in a different overlay PNG.
+Optional: pick a different template from the **Frame** picker, or **upload your own** overlay PNG.
 
 ## Run locally
 
@@ -44,8 +44,12 @@ Then visit `http://localhost:8000`.
 index.html   markup + controls
 style.css    dark UI theme
 app.js       canvas compositing, editor, export
-LASER TWIBBON (1350 x 1080 px).png   the campaign frame
+frames/      frame template PNGs (add more here)
+  laser.png  the Sirkumboy campaign frame
 ```
+
+To add a template: drop a transparent-window PNG into `frames/` and add one
+line to the `FRAMES` array in `app.js`.
 
 ## How it works
 
