@@ -1,12 +1,7 @@
 'use strict';
 
-/* ============================================================
-   Twibbon Maker — Sirkumboy "Sunat Laser Dioda"
-   Layer 1 = user photo (movable). Layer 2 = fixed frame PNG.
-   Frame is bundled (base64 in frame-data.js) so export works
-   from file:// without canvas tainting. Frame is swappable.
-   Canvas size matches the frame's native dimensions.
-   ============================================================ */
+// Twibbon Maker — Sirkumboy. Layer 1 = user photo (movable),
+// layer 2 = fixed frame PNG. Canvas matches frame native size.
 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
@@ -14,7 +9,6 @@ const ctx = canvas.getContext('2d');
 const els = {
   stage: document.getElementById('stage'),
   hint: document.getElementById('stageHint'),
-  meta: document.getElementById('stageMeta'),
   frameInput: document.getElementById('frameInput'),
   photoInput: document.getElementById('photoInput'),
   editorBlock: document.getElementById('editorBlock'),
@@ -27,26 +21,20 @@ const els = {
   downloadBtn: document.getElementById('downloadBtn'),
 };
 
-// --- State ---
+const FRAME_SRC = 'LASER TWIBBON (1350 x 1080 px).png';
+
 const state = {
   frame: null,            // Image (layer 2)
   photo: null,            // Image (layer 1)
-  W: 1350,                // canvas width = frame width
-  H: 1080,                // canvas height = frame height
+  W: 0, H: 0,             // canvas size = frame native size
   win: null,              // transparent window rect {x,y,w,h} the photo fills
-  // photo transform (canvas/native pixels)
-  x: 675,                 // center x of photo
-  y: 540,                 // center y of photo
+  x: 0, y: 0,             // photo center (canvas px)
   zoom: 1,                // multiplier over coverScale
   rotation: 0,            // radians
-  coverScale: 1,          // scale that makes photo cover the window
+  coverScale: 1,          // scale that covers the window
 };
 
-/* ============================================================
-   Detect the transparent "window" of a frame by scanning alpha.
-   Returns {x,y,w,h} bounding box of transparent pixels, or the
-   full canvas if the frame has no transparency.
-   ============================================================ */
+// Detect the transparent window by alpha bbox; full canvas if opaque/tainted.
 function detectWindow(img, W, H) {
   try {
     const off = document.createElement('canvas');
@@ -55,8 +43,7 @@ function detectWindow(img, W, H) {
     ox.drawImage(img, 0, 0, W, H);
     const data = ox.getImageData(0, 0, W, H).data;
     let minX = W, minY = H, maxX = -1, maxY = -1;
-    const ALPHA = 16;          // treat <16 as transparent
-    const step = 2;            // sample every 2px for speed
+    const ALPHA = 16, step = 2;
     for (let y = 0; y < H; y += step) {
       for (let x = 0; x < W; x += step) {
         if (data[(y * W + x) * 4 + 3] < ALPHA) {
@@ -67,30 +54,24 @@ function detectWindow(img, W, H) {
         }
       }
     }
-    if (maxX < 0) return { x: 0, y: 0, w: W, h: H };   // no transparency
+    if (maxX < 0) return { x: 0, y: 0, w: W, h: H };
     return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
   } catch (e) {
-    // tainted canvas (cross-origin) — fall back to full canvas
     return { x: 0, y: 0, w: W, h: H };
   }
 }
 
-/* ============================================================
-   Frame loading
-   ============================================================ */
 function loadFrame(img) {
   const apply = () => {
     state.frame = img;
-    state.W = img.naturalWidth || 1350;
-    state.H = img.naturalHeight || 1080;
+    state.W = img.naturalWidth;
+    state.H = img.naturalHeight;
     canvas.width = state.W;
     canvas.height = state.H;
     els.stage.style.aspectRatio = `${state.W} / ${state.H}`;
     state.win = detectWindow(img, state.W, state.H);
     if (state.photo) fitPhoto(true);
     els.hint.classList.add('hidden');
-    els.meta.textContent =
-      `Frame ${state.W}x${state.H} • window ${state.win.w}x${state.win.h} px`;
     updateDownloadState();
     render();
   };
@@ -98,9 +79,6 @@ function loadFrame(img) {
   else img.onload = apply;
 }
 
-/* ============================================================
-   Photo loading & transform
-   ============================================================ */
 function loadPhoto(img) {
   state.photo = img;
   fitPhoto(true);
@@ -114,9 +92,10 @@ function loadPhoto(img) {
 function fitPhoto(resetTransform) {
   if (!state.photo) return;
   const win = state.win || { x: 0, y: 0, w: state.W, h: state.H };
-  const iw = state.photo.naturalWidth;
-  const ih = state.photo.naturalHeight;
-  state.coverScale = Math.max(win.w / iw, win.h / ih);
+  state.coverScale = Math.max(
+    win.w / state.photo.naturalWidth,
+    win.h / state.photo.naturalHeight
+  );
   if (resetTransform) {
     state.x = win.x + win.w / 2;
     state.y = win.y + win.h / 2;
@@ -133,34 +112,22 @@ function syncLabels() {
   els.rotateVal.textContent = Math.round(state.rotation * 180 / Math.PI) + '°';
 }
 
-/* ============================================================
-   Render
-   ============================================================ */
 function render() {
   ctx.clearRect(0, 0, state.W, state.H);
-
   if (state.photo) {
     const s = state.coverScale * state.zoom;
     ctx.save();
     ctx.translate(state.x, state.y);
     ctx.rotate(state.rotation);
     ctx.scale(s, s);
-    ctx.drawImage(
-      state.photo,
-      -state.photo.naturalWidth / 2,
-      -state.photo.naturalHeight / 2
-    );
+    ctx.drawImage(state.photo,
+      -state.photo.naturalWidth / 2, -state.photo.naturalHeight / 2);
     ctx.restore();
   }
-
-  if (state.frame) {
-    ctx.drawImage(state.frame, 0, 0, state.W, state.H);
-  }
+  if (state.frame) ctx.drawImage(state.frame, 0, 0, state.W, state.H);
 }
 
-/* ============================================================
-   Pointer interaction: drag + pinch (zoom & rotate)
-   ============================================================ */
+// --- Pointer: drag + two-finger pinch (zoom & rotate) ---
 const pointers = new Map();
 let dragStart = null;
 let pinchStart = null;
@@ -221,19 +188,14 @@ function pinchInfo() {
   const pts = [...pointers.values()];
   const dx = pts[0].x - pts[1].x;
   const dy = pts[0].y - pts[1].y;
-  return {
-    dist: Math.hypot(dx, dy),
-    angle: Math.atan2(dy, dx),
-  };
+  return { dist: Math.hypot(dx, dy), angle: Math.atan2(dy, dx) };
 }
 
 function beginPinch() {
   const info = pinchInfo();
   pinchStart = {
-    dist: info.dist,
-    angle: info.angle,
-    zoom: state.zoom,
-    rotation: state.rotation,
+    dist: info.dist, angle: info.angle,
+    zoom: state.zoom, rotation: state.rotation,
   };
 }
 
@@ -251,16 +213,13 @@ function updatePinch() {
 canvas.addEventListener('wheel', (e) => {
   if (!state.photo) return;
   e.preventDefault();
-  const factor = e.deltaY < 0 ? 1.06 : 1 / 1.06;
-  state.zoom = clamp(state.zoom * factor, 0.2, 4);
+  state.zoom = clamp(state.zoom * (e.deltaY < 0 ? 1.06 : 1 / 1.06), 0.2, 4);
   els.zoom.value = String(state.zoom);
   syncLabels();
   render();
 }, { passive: false });
 
-/* ============================================================
-   Slider controls
-   ============================================================ */
+// --- Slider controls ---
 els.zoom.addEventListener('input', () => {
   state.zoom = parseFloat(els.zoom.value);
   syncLabels();
@@ -282,9 +241,7 @@ els.centerBtn.addEventListener('click', () => {
   render();
 });
 
-/* ============================================================
-   File inputs
-   ============================================================ */
+// --- File inputs ---
 function readFileToImage(file, cb) {
   if (!file) return;
   const reader = new FileReader();
@@ -296,16 +253,12 @@ function readFileToImage(file, cb) {
   reader.readAsDataURL(file);
 }
 
-els.frameInput.addEventListener('change', (e) => {
-  readFileToImage(e.target.files[0], loadFrame);
-});
-els.photoInput.addEventListener('change', (e) => {
-  readFileToImage(e.target.files[0], loadPhoto);
-});
+els.frameInput.addEventListener('change', (e) =>
+  readFileToImage(e.target.files[0], loadFrame));
+els.photoInput.addEventListener('change', (e) =>
+  readFileToImage(e.target.files[0], loadPhoto));
 
-/* ============================================================
-   Download (native frame resolution)
-   ============================================================ */
+// --- Download (native frame resolution) ---
 function updateDownloadState() {
   els.downloadBtn.disabled = !(state.frame && state.photo);
 }
@@ -316,7 +269,7 @@ els.downloadBtn.addEventListener('click', () => {
   try {
     url = canvas.toDataURL('image/png');
   } catch (err) {
-    alert('Export blocked (canvas tainted). Run the site via a local server instead of file://.');
+    alert('Export blocked (canvas tainted). Serve the site over http, not file://.');
     return;
   }
   const a = document.createElement('a');
@@ -327,18 +280,11 @@ els.downloadBtn.addEventListener('click', () => {
   a.remove();
 });
 
-/* ============================================================
-   Utils + init
-   ============================================================ */
 function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
 
 // Auto-load bundled frame.
-(function initFrame() {
-  if (typeof window.BUNDLED_FRAME === 'string') {
-    const img = new Image();
-    img.onload = () => loadFrame(img);
-    img.src = window.BUNDLED_FRAME;
-  }
-})();
+const bundled = new Image();
+bundled.onload = () => loadFrame(bundled);
+bundled.src = FRAME_SRC;
 
 render();

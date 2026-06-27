@@ -75,12 +75,6 @@ html, body {
   padding: 24px;
 }
 .stage-hint.hidden { display: none; }
-.stage-meta {
-  text-align: center;
-  color: var(--muted);
-  font-size: 12px;
-  margin: 10px 0 0;
-}
 
 /* Panel */
 .panel {
