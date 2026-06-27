@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Twibbon Maker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Twibbon Maker</h1>
+    <p class="sub">Drop your photo behind a frame &middot; drag, zoom, rotate &middot; export PNG</p>
+  </header>
+
+  <main class="layout">
+    <!-- Stage -->
+    <section class="stage-wrap">
+      <div class="stage" id="stage">
+        <canvas id="canvas" width="1350" height="1080"></canvas>
+        <div class="stage-hint" id="stageHint">
+          <p>Upload your photo to start</p>
+        </div>
+      </div>
+      <p class="stage-meta" id="stageMeta">No frame loaded</p>
+    </section>
+
+    <!-- Controls -->
+    <aside class="panel">
+      <div class="block">
+        <h2>1. Photo <span class="tag">layer 1</span></h2>
+        <label class="file-btn primary">
+          Upload photo
+          <input type="file" id="photoInput" accept="image/*" hidden />
+        </label>
+      </div>
+
+      <div class="block" id="editorBlock" hidden>
+        <h2>2. Position</h2>
+
+        <div class="ctrl">
+          <label for="zoom">Zoom <span class="val" id="zoomVal">100%</span></label>
+          <input type="range" id="zoom" min="0.2" max="4" step="0.01" value="1" />
+        </div>
+
+        <div class="ctrl">
+          <label for="rotate">Rotate <span class="val" id="rotateVal">0&deg;</span></label>
+          <input type="range" id="rotate" min="-180" max="180" step="1" value="0" />
+        </div>
+
+        <div class="btn-row">
+          <button class="btn ghost" id="resetBtn">Reset</button>
+          <button class="btn ghost" id="centerBtn">Center</button>
+        </div>
+        <p class="hint">Drag photo on the canvas. Scroll / pinch to zoom.</p>
+      </div>
+
+      <div class="block">
+        <button class="btn primary wide" id="downloadBtn" disabled>Download PNG</button>
+        <label class="file-btn swap">
+          Change frame
+          <input type="file" id="frameInput" accept="image/png,image/*" hidden />
+        </label>
+      </div>
+    </aside>
+  </main>
+
+  <script src="frame-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
